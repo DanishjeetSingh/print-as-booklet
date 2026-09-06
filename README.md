@@ -32,7 +32,7 @@ The installer creates an isolated Python virtual environment and installs `pypdf
 ## Install
 
 ```sh
-git clone git@github.com:DanishjeetSingh/macos-print-booklet.git
+gh repo clone DanishjeetSingh/macos-print-booklet
 cd macos-print-booklet
 ./install.sh
 ```
