@@ -10,13 +10,13 @@ from reportlab.pdfgen import canvas
 
 
 FONT_NAME = "Times-Roman"
-BINDING_BAND_WIDTH = 0.5 * 72.0 / 2.54
+BINDING_BAND_WIDTH = 1.0 * 72.0 / 2.54
 BINDING_BAND_GRAY = 0.91
 STAPLE_MARK_GRAY = 0.38
 
 
 def draw_binding_guide(overlay_canvas: canvas.Canvas, height: float) -> None:
-    """Draw a 5 mm binding band and three staple-position marks."""
+    """Draw a 1 cm binding band and three staple-position marks."""
     overlay_canvas.saveState()
     overlay_canvas.setFillColorRGB(
         BINDING_BAND_GRAY,
@@ -26,7 +26,7 @@ def draw_binding_guide(overlay_canvas: canvas.Canvas, height: float) -> None:
     overlay_canvas.rect(0, 0, BINDING_BAND_WIDTH, height, stroke=0, fill=1)
 
     marker_width = BINDING_BAND_WIDTH * 0.64
-    marker_height = 1.5
+    marker_height = 3.0
     marker_x = (BINDING_BAND_WIDTH - marker_width) / 2.0
     overlay_canvas.setFillColorRGB(
         STAPLE_MARK_GRAY,

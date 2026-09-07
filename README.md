@@ -8,7 +8,7 @@ The workflow:
 
 - accepts one or more PDFs from Finder;
 - adds centered Times Roman page numbers to the original pages;
-- adds a 5 mm light-gray binding band and three staple marks to the first page;
+- adds a 1 cm light-gray binding band and three heavy staple marks to the first page;
 - pads the document to a complete four-page booklet signature;
 - imposes two pages on each landscape sheet side;
 - prints duplex with short-edge flipping;
@@ -96,7 +96,7 @@ Page numbers are added before booklet imposition, so they follow reading order r
 
 ## First-page binding guide
 
-The first source page receives a 5 mm light-gray band along its left edge. Three darker marks indicate suggested staple positions at one-quarter, one-half, and three-quarters of the page height. The middle mark is exactly centered. Other pages are unchanged apart from page numbering.
+The first source page receives a 1 cm light-gray band along its left edge. Three heavier, darker marks indicate suggested staple positions at one-quarter, one-half, and three-quarters of the page height. The middle mark is exactly centered. Other pages are unchanged apart from page numbering.
 
 ## How booklet imposition works
 
