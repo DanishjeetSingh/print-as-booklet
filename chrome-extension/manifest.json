@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Print Current PDF as Booklet",
+  "version": "1.0.0",
+  "description": "Print the PDF in the active Chrome tab using the local macOS booklet workflow.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsqwT2lgSxoGMRDnUeKTiclkUKVROhCLweRzzyLwnb/99bH1VVpKXn1uRqagQbrUmhQJObJxj6TIijIfpI8EoAN+tXjTY44R30EIOyXyDBiH7EhPtyG1souMxfsYF2/WCA9QLwlpaXNQa7LKVOCIKTqdiqf1u672EdG6QH67UIhkj/9ajOHiMXpphiBpYStu93s1DmuSzlqyVlxHAxOWGC2lIXCsIRIdfPq8ykAXc3OIGld2Vaym5n5icEzBj8e88ASzr+7zXMjkcfl3X8cTaoFTkZ/7cz39NinirWEX7NT8w7Cx23LJGW57U5WYSpPAr6aSsth4He4QP3BOdDOTfUwIDAQAB",
+  "permissions": [
+    "activeTab",
+    "cookies",
+    "nativeMessaging"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Print current PDF as booklet"
+  }
+}

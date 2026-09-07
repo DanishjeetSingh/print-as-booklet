@@ -7,6 +7,9 @@ readonly support_dir="$HOME/Library/Application Support/Print Booklet"
 readonly service_parent="$HOME/Library/Services"
 readonly service_dir="$service_parent/Print as Booklet.workflow"
 readonly url_service_dir="$service_parent/Print Copied PDF URL as Booklet.workflow"
+readonly chrome_native_host_dir="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+readonly chrome_native_host_manifest="$chrome_native_host_dir/com.danishjeetsingh.print_booklet.json"
+readonly chrome_extension_dir="$support_dir/Chrome Extension"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/TeX/texbin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -27,7 +30,7 @@ if [[ -z "$python_source" ]]; then
   exit 69
 fi
 
-/bin/mkdir -p "$support_dir" "$service_parent"
+/bin/mkdir -p "$support_dir" "$service_parent" "$chrome_native_host_dir"
 "$python_source" -m venv "$support_dir/.venv"
 "$support_dir/.venv/bin/python3" -m pip install --upgrade pip
 "$support_dir/.venv/bin/python3" -m pip install -r "$repo_dir/requirements.txt"
@@ -36,6 +39,28 @@ fi
 /usr/bin/install -m 755 "$repo_dir/scripts/add-page-numbers.py" "$support_dir/add-page-numbers.py"
 /usr/bin/install -m 755 "$repo_dir/scripts/add-binding-guide.py" "$support_dir/add-binding-guide.py"
 /usr/bin/install -m 755 "$repo_dir/scripts/print-copied-pdf-url.zsh" "$support_dir/print-copied-pdf-url.zsh"
+/usr/bin/install -m 755 "$repo_dir/scripts/print-current-chrome-pdf-host.py" "$support_dir/print-current-chrome-pdf-host.py"
+/usr/bin/install -m 755 "$repo_dir/scripts/print-current-chrome-pdf-host.zsh" "$support_dir/print-current-chrome-pdf-host.zsh"
+/usr/bin/ditto "$repo_dir/chrome-extension" "$chrome_extension_dir"
+
+"$support_dir/.venv/bin/python3" - "$chrome_native_host_manifest" "$support_dir/print-current-chrome-pdf-host.zsh" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+host_path = str(Path(sys.argv[2]).resolve())
+manifest = {
+    "name": "com.danishjeetsingh.print_booklet",
+    "description": "Local bridge for Print Current PDF as Booklet",
+    "path": host_path,
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://cdkefockfbcpgognldnfoihdcbmgdjab/"
+    ],
+}
+manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
 
 if [[ ! -f "$support_dir/config.zsh" ]]; then
   /bin/cp "$repo_dir/config.example.zsh" "$support_dir/config.zsh"
@@ -49,3 +74,4 @@ fi
 print "Installed: Print as Booklet and Print Copied PDF URL as Booklet"
 print "Use Finder: right-click a PDF, then choose Quick Actions > Print as Booklet."
 print "Or copy a direct PDF URL, then choose Services > Print Copied PDF URL as Booklet."
+print "Chrome extension files: $chrome_extension_dir"

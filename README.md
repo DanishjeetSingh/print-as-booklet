@@ -57,6 +57,20 @@ The URL must begin with `http://` or `https://` and return an actual PDF. Public
 
 Both actions submit the print job immediately. They do not show the normal print dialog.
 
+## Authenticated PDFs in Chrome
+
+Copied URLs may return a shortened public preview when the full PDF depends on a logged-in browser session. The included Chrome extension solves this by passing cookies for only the active tab to the local native helper. The helper downloads the PDF into a uniquely named macOS temporary directory, validates it, runs the normal booklet workflow, and removes the PDF and cookie file afterward.
+
+Run `./install.sh`, then:
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select `~/Library/Application Support/Print Booklet/Chrome Extension`.
+5. Optionally pin **Print Current PDF as Booklet** to Chrome's toolbar.
+
+While viewing a PDF, click the extension. It requests access to that PDF's website and sends only the cookies applicable to its URL to the registered local helper. For Substack, it also requests the parent `substack.com` domain because that is where Substack stores its login cookie. Chrome retains approved site permissions until you revoke them from the extension's settings. The extension does not create a file in Downloads.
+
 ## Configuration
 
 The first installation creates:
