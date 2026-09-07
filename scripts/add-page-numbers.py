@@ -10,41 +10,6 @@ from reportlab.pdfgen import canvas
 
 
 FONT_NAME = "Times-Roman"
-BINDING_BAND_WIDTH = 1.0 * 72.0 / 2.54
-BINDING_BAND_GRAY = 0.91
-STAPLE_MARK_GRAY = 0.38
-
-
-def draw_binding_guide(overlay_canvas: canvas.Canvas, height: float) -> None:
-    """Draw a 1 cm binding band and three staple-position marks."""
-    overlay_canvas.saveState()
-    overlay_canvas.setFillColorRGB(
-        BINDING_BAND_GRAY,
-        BINDING_BAND_GRAY,
-        BINDING_BAND_GRAY,
-    )
-    overlay_canvas.rect(0, 0, BINDING_BAND_WIDTH, height, stroke=0, fill=1)
-
-    marker_width = BINDING_BAND_WIDTH * 0.64
-    marker_height = 3.0
-    marker_x = (BINDING_BAND_WIDTH - marker_width) / 2.0
-    overlay_canvas.setFillColorRGB(
-        STAPLE_MARK_GRAY,
-        STAPLE_MARK_GRAY,
-        STAPLE_MARK_GRAY,
-    )
-    for vertical_fraction in (0.25, 0.5, 0.75):
-        marker_y = height * vertical_fraction - marker_height / 2.0
-        overlay_canvas.roundRect(
-            marker_x,
-            marker_y,
-            marker_width,
-            marker_height,
-            marker_height / 2.0,
-            stroke=0,
-            fill=1,
-        )
-    overlay_canvas.restoreState()
 
 
 def add_page_numbers(source_path: Path, output_path: Path) -> None:
@@ -66,9 +31,6 @@ def add_page_numbers(source_path: Path, output_path: Path) -> None:
 
         overlay_buffer = io.BytesIO()
         overlay_canvas = canvas.Canvas(overlay_buffer, pagesize=(width, height))
-        if page_number == 1:
-            draw_binding_guide(overlay_canvas, height)
-
         overlay_canvas.saveState()
         overlay_canvas.setFillColorRGB(1.0, 1.0, 1.0)
         if hasattr(overlay_canvas, "setFillAlpha"):

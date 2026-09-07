@@ -7,6 +7,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/TeX/texbin:/usr/bin:/bin:
 readonly script_dir="${0:A:h}"
 readonly config_file="$script_dir/config.zsh"
 readonly page_numberer="$script_dir/add-page-numbers.py"
+readonly binding_guide="$script_dir/add-binding-guide.py"
 readonly temp_root="${TMPDIR:-/tmp}"
 
 typeset printer_name=""
@@ -43,7 +44,7 @@ if [[ -z "$pdfbook2_bin" || ! -x "$pdfbook2_bin" ]]; then
   exit 69
 fi
 
-if [[ ! -x "$python_bin" || ! -f "$page_numberer" ]]; then
+if [[ ! -x "$python_bin" || ! -f "$page_numberer" || ! -f "$binding_guide" ]]; then
   print -u2 "The page-numbering environment is unavailable. Run install.sh again."
   exit 69
 fi
@@ -81,6 +82,7 @@ for source_pdf in "$@"; do
   working_pdf="$job_temp_dir/input-${item_number}.pdf"
   numbered_pdf="$job_temp_dir/numbered-${item_number}.pdf"
   imposed_pdf="$job_temp_dir/numbered-${item_number}-book.pdf"
+  guided_pdf="$job_temp_dir/booklet-${item_number}-with-guide.pdf"
   /bin/cp -- "$source_pdf" "$working_pdf"
 
   "$python_bin" "$page_numberer" "$working_pdf" "$numbered_pdf"
@@ -91,9 +93,15 @@ for source_pdf in "$@"; do
     exit 70
   fi
 
+  "$python_bin" "$binding_guide" "$imposed_pdf" "$guided_pdf"
+  if [[ ! -s "$guided_pdf" ]]; then
+    print -u2 "Binding guide preparation failed for: $source_pdf"
+    exit 70
+  fi
+
   if (( dry_run )); then
     if [[ -n "$pdfinfo_bin" ]]; then
-      "$pdfinfo_bin" "$imposed_pdf" | /usr/bin/grep -E '^(Pages|Page size)'
+      "$pdfinfo_bin" "$guided_pdf" | /usr/bin/grep -E '^(Pages|Page size)'
     else
       print "Prepared: $source_pdf"
     fi
@@ -111,7 +119,7 @@ for source_pdf in "$@"; do
     -o Duplex=DuplexTumble \
     -o ColorModel=Gray \
     -o cupsPrintQuality=Normal \
-    "$imposed_pdf"
+    "$guided_pdf"
 
   (( submitted_count += 1 ))
 done

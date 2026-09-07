@@ -96,7 +96,7 @@ Page numbers are added before booklet imposition, so they follow reading order r
 
 ## First-page binding guide
 
-The first source page receives a 1 cm light-gray band along its left edge. Three heavier, darker marks indicate suggested staple positions at one-quarter, one-half, and three-quarters of the page height. The middle mark is exactly centered. Other pages are unchanged apart from page numbering.
+After booklet imposition, the first finished booklet page receives a 1 cm light-gray band along its left edge. Applying the guide after two-up scaling makes the band span the full height of the booklet page and preserves its physical 1 cm width. Three heavier, vertical marks indicate suggested staple positions at 15%, 50%, and 85% of the finished page height. The middle mark is exactly centered. Other pages are unchanged apart from page numbering.
 
 ## How booklet imposition works
 

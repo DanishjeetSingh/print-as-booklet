@@ -34,6 +34,7 @@ fi
 
 /usr/bin/install -m 755 "$repo_dir/scripts/print-booklet.zsh" "$support_dir/print-booklet.zsh"
 /usr/bin/install -m 755 "$repo_dir/scripts/add-page-numbers.py" "$support_dir/add-page-numbers.py"
+/usr/bin/install -m 755 "$repo_dir/scripts/add-binding-guide.py" "$support_dir/add-binding-guide.py"
 /usr/bin/install -m 755 "$repo_dir/scripts/print-copied-pdf-url.zsh" "$support_dir/print-copied-pdf-url.zsh"
 
 if [[ ! -f "$support_dir/config.zsh" ]]; then
