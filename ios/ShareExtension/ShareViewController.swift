@@ -4,10 +4,11 @@ import UniformTypeIdentifiers
 import UIKit
 import WebKit
 
-final class ShareViewController: SLComposeServiceViewController {
+final class ShareViewController: SLComposeServiceViewController, UIPrinterPickerControllerDelegate {
     private var articleURL: URL?
     private let processor: any BookletProcessing = LiveBookletProcessor()
     private let quickPrinter = IPPPrintClient()
+    private var printerPicker: UIPrinterPickerController?
 
     private enum PrinterDefaults {
         static let url = "quickPrinterURL"
@@ -95,8 +96,11 @@ final class ShareViewController: SLComposeServiceViewController {
             .flatMap(URL.init(string:))
             .map(UIPrinter.init(url:))
         let picker = UIPrinterPickerController(initiallySelectedPrinter: initiallySelected)
+        picker.delegate = self
+        printerPicker = picker
         let presented = picker.present(animated: true) { [weak self] picker, userDidSelect, error in
             guard let self else { return }
+            printerPicker = nil
             if let error {
                 showQuickPrintError(error, fileURL: nil)
                 return
@@ -112,8 +116,15 @@ final class ShareViewController: SLComposeServiceViewController {
             completion?(printer)
         }
         if !presented {
+            printerPicker = nil
             showPrintPresentationError()
         }
+    }
+
+    func printerPickerControllerParentViewController(
+        _ printerPickerController: UIPrinterPickerController
+    ) -> UIViewController? {
+        self
     }
 
     private func submitQuickPrint(fileURL: URL, to printer: UIPrinter) {
