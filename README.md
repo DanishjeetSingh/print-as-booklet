@@ -2,6 +2,8 @@
 
 A Finder Quick Action that converts ordinary PDFs into folded booklet order and prints them automatically.
 
+The repository also contains an initial [iPhone app](ios/README.md) with a Share Extension. After signing into Substack once in the app, it can accept an article URL from the Substack share sheet, fetch the authenticated PDF, apply the same booklet formatting, and open AirPrint with short-edge duplex requested.
+
 It also includes a system Service that downloads a copied direct PDF URL into temporary storage, prints it through the same booklet workflow, and removes the temporary file afterward.
 
 The workflow:
