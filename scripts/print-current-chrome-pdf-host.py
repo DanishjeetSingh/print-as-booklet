@@ -47,7 +47,7 @@ def send_message(message: dict) -> None:
 def show_error(message: str) -> None:
     script = """
 on run argv
-  display alert "Print Current PDF as Booklet" message (item 1 of argv) as critical
+  display alert "Print Article or PDF as Booklet" message (item 1 of argv) as critical
 end run
 """
     subprocess.run(

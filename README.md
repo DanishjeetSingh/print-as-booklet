@@ -24,8 +24,8 @@ Build and install with Xcode: [iPhone setup](ios/README.md).
 
 ```sh
 brew install python pdfbook2
-gh repo clone DanishjeetSingh/macos-print-booklet
-cd macos-print-booklet
+gh repo clone DanishjeetSingh/print-as-booklet
+cd print-as-booklet
 ./install.sh
 ```
 

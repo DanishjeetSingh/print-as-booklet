@@ -52,7 +52,7 @@ manifest_path = Path(sys.argv[1])
 host_path = str(Path(sys.argv[2]).resolve())
 manifest = {
     "name": "com.danishjeetsingh.print_booklet",
-    "description": "Local bridge for Print Current PDF as Booklet",
+    "description": "Local bridge for Print Article or PDF as Booklet",
     "path": host_path,
     "type": "stdio",
     "allowed_origins": [
