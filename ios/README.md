@@ -13,10 +13,11 @@ This folder contains the initial iOS app and Share Extension shell.
 4. The extension renders the PDF as a booklet, overlays the full-height binding
    guide on the imposed half-sheet containing page 1, and submits it through
    Quick Print.
-5. On the first Quick Print, choose the printer once. The extension remembers
-   that printer and sends later booklets directly with Letter paper and the
-   duplex mode verified for the Brother printer. Tap **Quick Printer** in the
-   share panel whenever you need to change it.
+5. The first prepared booklet opens the normal print sheet. Select the printer
+   and print once; the extension captures that printer and sends later booklets
+   directly with Letter paper and the duplex mode verified for the Brother
+   printer. If Quick Print later fails, choose **Change Printer** to repeat this
+   one-time setup.
 
 Quick Print uses the printer's IPP service because UIKit's built-in direct-print
 method disables duplex. If direct submission fails, the error alert offers the

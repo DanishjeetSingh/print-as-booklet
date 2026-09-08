@@ -4,15 +4,13 @@ import UniformTypeIdentifiers
 import UIKit
 import WebKit
 
-final class ShareViewController: SLComposeServiceViewController, UIPrinterPickerControllerDelegate {
+final class ShareViewController: SLComposeServiceViewController {
     private var articleURL: URL?
     private let processor: any BookletProcessing = LiveBookletProcessor()
     private let quickPrinter = IPPPrintClient()
-    private var printerPicker: UIPrinterPickerController?
 
     private enum PrinterDefaults {
         static let url = "quickPrinterURL"
-        static let name = "quickPrinterName"
     }
 
     override func viewDidLoad() {
@@ -34,15 +32,7 @@ final class ShareViewController: SLComposeServiceViewController, UIPrinterPicker
         prepareAndPrint(articleURL)
     }
 
-    override func configurationItems() -> [Any]! {
-        guard let item = SLComposeSheetConfigurationItem() else { return [] }
-        item.title = "Quick Printer"
-        item.value = UserDefaults.standard.string(forKey: PrinterDefaults.name) ?? "Choose once"
-        item.tapHandler = { [weak self] in
-            self?.chooseQuickPrinter()
-        }
-        return [item]
-    }
+    override func configurationItems() -> [Any]! { [] }
 
     private func loadSharedURL() {
         let items = extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem } ?? []
@@ -82,49 +72,10 @@ final class ShareViewController: SLComposeServiceViewController, UIPrinterPicker
             let saved = UserDefaults.standard.string(forKey: PrinterDefaults.url),
             let printerURL = URL(string: saved)
         else {
-            chooseQuickPrinter { [weak self] printer in
-                self?.submitQuickPrint(fileURL: fileURL, to: printer)
-            }
+            presentPrintSheet(for: fileURL, rememberPrinter: true)
             return
         }
         submitQuickPrint(fileURL: fileURL, to: UIPrinter(url: printerURL))
-    }
-
-    private func chooseQuickPrinter(completion: ((UIPrinter) -> Void)? = nil) {
-        setWorking(false, title: "Choose Printer")
-        let initiallySelected = UserDefaults.standard.string(forKey: PrinterDefaults.url)
-            .flatMap(URL.init(string:))
-            .map(UIPrinter.init(url:))
-        let picker = UIPrinterPickerController(initiallySelectedPrinter: initiallySelected)
-        picker.delegate = self
-        printerPicker = picker
-        let presented = picker.present(animated: true) { [weak self] picker, userDidSelect, error in
-            guard let self else { return }
-            printerPicker = nil
-            if let error {
-                showQuickPrintError(error, fileURL: nil)
-                return
-            }
-            guard userDidSelect, let printer = picker.selectedPrinter else {
-                setWorking(false, title: "Print as Booklet")
-                return
-            }
-
-            UserDefaults.standard.set(printer.url.absoluteString, forKey: PrinterDefaults.url)
-            UserDefaults.standard.set(printer.displayName, forKey: PrinterDefaults.name)
-            reloadConfigurationItems()
-            completion?(printer)
-        }
-        if !presented {
-            printerPicker = nil
-            showPrintPresentationError()
-        }
-    }
-
-    func printerPickerControllerParentViewController(
-        _ printerPickerController: UIPrinterPickerController
-    ) -> UIViewController? {
-        self
     }
 
     private func submitQuickPrint(fileURL: URL, to printer: UIPrinter) {
@@ -152,12 +103,11 @@ final class ShareViewController: SLComposeServiceViewController, UIPrinterPicker
                 self?.quickPrintOrChoosePrinter(fileURL: fileURL)
             })
             alert.addAction(UIAlertAction(title: "Change Printer", style: .default) { [weak self] _ in
-                self?.chooseQuickPrinter { [weak self] printer in
-                    self?.submitQuickPrint(fileURL: fileURL, to: printer)
-                }
+                UserDefaults.standard.removeObject(forKey: PrinterDefaults.url)
+                self?.presentPrintSheet(for: fileURL, rememberPrinter: true)
             })
             alert.addAction(UIAlertAction(title: "Standard Print", style: .default) { [weak self] _ in
-                self?.presentPrintSheet(for: fileURL)
+                self?.presentPrintSheet(for: fileURL, rememberPrinter: true)
             })
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -206,7 +156,7 @@ final class ShareViewController: SLComposeServiceViewController, UIPrinterPicker
         present(navigation, animated: true)
     }
 
-    private func presentPrintSheet(for fileURL: URL) {
+    private func presentPrintSheet(for fileURL: URL, rememberPrinter: Bool = false) {
         setWorking(false, title: "Print Booklet")
 
         let info = UIPrintInfo(dictionary: nil)
@@ -217,7 +167,10 @@ final class ShareViewController: SLComposeServiceViewController, UIPrinterPicker
         let controller = UIPrintInteractionController.shared
         controller.printInfo = info
         controller.printingItem = fileURL
-        let presented = controller.present(animated: true) { [weak self] _, _, _ in
+        let presented = controller.present(animated: true) { [weak self] controller, completed, _ in
+            if rememberPrinter, completed, let printerID = controller.printInfo?.printerID {
+                UserDefaults.standard.set(printerID, forKey: PrinterDefaults.url)
+            }
             self?.extensionContext?.completeRequest(returningItems: nil)
         }
         if !presented {
