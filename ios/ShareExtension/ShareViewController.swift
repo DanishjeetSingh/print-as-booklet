@@ -7,6 +7,12 @@ import WebKit
 final class ShareViewController: SLComposeServiceViewController {
     private var articleURL: URL?
     private let processor: any BookletProcessing = LiveBookletProcessor()
+    private let quickPrinter = IPPPrintClient()
+
+    private enum PrinterDefaults {
+        static let url = "quickPrinterURL"
+        static let name = "quickPrinterName"
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,7 +33,15 @@ final class ShareViewController: SLComposeServiceViewController {
         prepareAndPrint(articleURL)
     }
 
-    override func configurationItems() -> [Any]! { [] }
+    override func configurationItems() -> [Any]! {
+        guard let item = SLComposeSheetConfigurationItem() else { return [] }
+        item.title = "Quick Printer"
+        item.value = UserDefaults.standard.string(forKey: PrinterDefaults.name) ?? "Choose once"
+        item.tapHandler = { [weak self] in
+            self?.chooseQuickPrinter()
+        }
+        return [item]
+    }
 
     private func loadSharedURL() {
         let items = extensionContext?.inputItems.compactMap { $0 as? NSExtensionItem } ?? []
@@ -55,11 +69,88 @@ final class ShareViewController: SLComposeServiceViewController {
             guard let self else { return }
             do {
                 let booklet = try await processor.prepareBooklet(from: url)
-                presentPrintSheet(for: booklet.fileURL)
+                quickPrintOrChoosePrinter(fileURL: booklet.fileURL)
             } catch {
                 handlePreparationError(error, articleURL: url)
             }
         }
+    }
+
+    private func quickPrintOrChoosePrinter(fileURL: URL) {
+        guard
+            let saved = UserDefaults.standard.string(forKey: PrinterDefaults.url),
+            let printerURL = URL(string: saved)
+        else {
+            chooseQuickPrinter { [weak self] printer in
+                self?.submitQuickPrint(fileURL: fileURL, to: printer)
+            }
+            return
+        }
+        submitQuickPrint(fileURL: fileURL, to: UIPrinter(url: printerURL))
+    }
+
+    private func chooseQuickPrinter(completion: ((UIPrinter) -> Void)? = nil) {
+        setWorking(false, title: "Choose Printer")
+        let initiallySelected = UserDefaults.standard.string(forKey: PrinterDefaults.url)
+            .flatMap(URL.init(string:))
+            .map(UIPrinter.init(url:))
+        let picker = UIPrinterPickerController(initiallySelectedPrinter: initiallySelected)
+        let presented = picker.present(animated: true) { [weak self] picker, userDidSelect, error in
+            guard let self else { return }
+            if let error {
+                showQuickPrintError(error, fileURL: nil)
+                return
+            }
+            guard userDidSelect, let printer = picker.selectedPrinter else {
+                setWorking(false, title: "Print as Booklet")
+                return
+            }
+
+            UserDefaults.standard.set(printer.url.absoluteString, forKey: PrinterDefaults.url)
+            UserDefaults.standard.set(printer.displayName, forKey: PrinterDefaults.name)
+            reloadConfigurationItems()
+            completion?(printer)
+        }
+        if !presented {
+            showPrintPresentationError()
+        }
+    }
+
+    private func submitQuickPrint(fileURL: URL, to printer: UIPrinter) {
+        setWorking(true, title: "Printing…")
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await quickPrinter.printBooklet(at: fileURL, to: printer.url)
+                extensionContext?.completeRequest(returningItems: nil)
+            } catch {
+                setWorking(false, title: "Print as Booklet")
+                showQuickPrintError(error, fileURL: fileURL)
+            }
+        }
+    }
+
+    private func showQuickPrintError(_ error: Error, fileURL: URL?) {
+        let alert = UIAlertController(
+            title: "Quick Print Failed",
+            message: error.localizedDescription,
+            preferredStyle: .alert
+        )
+        if let fileURL {
+            alert.addAction(UIAlertAction(title: "Try Again", style: .default) { [weak self] _ in
+                self?.quickPrintOrChoosePrinter(fileURL: fileURL)
+            })
+            alert.addAction(UIAlertAction(title: "Change Printer", style: .default) { [weak self] _ in
+                self?.chooseQuickPrinter { [weak self] printer in
+                    self?.submitQuickPrint(fileURL: fileURL, to: printer)
+                }
+            })
+            alert.addAction(UIAlertAction(title: "Standard Print", style: .default) { [weak self] _ in
+                self?.presentPrintSheet(for: fileURL)
+            })
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
     }
 
     private func handlePreparationError(_ error: Error, articleURL: URL) {

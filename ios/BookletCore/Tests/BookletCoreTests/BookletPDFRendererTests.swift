@@ -21,23 +21,20 @@ import Testing
     #expect(document.pageCount == 4)
 }
 
-@Test func bindingGuideUsesPhysicalSheetDimensionsRegardlessOfSourceScale() {
+@Test func bindingGuideUsesFullImposedPageHeight() {
     let oneCentimeter = CGFloat(72 / 2.54)
-    let portraitLetterAfterScaling = CGRect(x: 396, y: 49.76, width: 396, height: 512.47)
-    let squarePageAfterScaling = CGRect(x: 396, y: 108, width: 396, height: 396)
+    let imposedRightPage = CGRect(x: 396, y: 0, width: 396, height: 612)
 
-    for renderedPage in [portraitLetterAfterScaling, squarePageAfterScaling] {
-        let guide = BookletPDFRenderer.bindingGuideGeometry(
-            renderedPageRect: renderedPage,
-            requestedBandWidth: oneCentimeter
-        )
-        #expect(abs(guide.band.width - 28.346) < 0.01)
-        #expect(guide.band.minX == renderedPage.minX)
-        #expect(guide.band.minY == renderedPage.minY)
-        #expect(guide.band.height == renderedPage.height)
-        #expect(guide.markers.count == 3)
-        #expect(guide.markers.allSatisfy { abs($0.width - 3) < 0.001 })
-    }
+    let guide = BookletPDFRenderer.bindingGuideGeometry(
+        pageRect: imposedRightPage,
+        requestedBandWidth: oneCentimeter
+    )
+    #expect(abs(guide.band.width - 28.346) < 0.01)
+    #expect(guide.band.minX == imposedRightPage.minX)
+    #expect(guide.band.minY == 0)
+    #expect(guide.band.height == 612)
+    #expect(guide.markers.count == 3)
+    #expect(guide.markers.allSatisfy { abs($0.width - 3) < 0.001 })
 }
 
 private func makePDF(pageCount: Int) -> Data {

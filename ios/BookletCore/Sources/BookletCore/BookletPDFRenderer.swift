@@ -64,6 +64,11 @@ public struct BookletPDFRenderer: Sendable {
             context.beginPDFPage(nil)
             draw(pageNumber: side.leftPage, from: source, inLeftHalf: true, context: context)
             draw(pageNumber: side.rightPage, from: source, inLeftHalf: false, context: context)
+            if side.leftPage == 1 {
+                drawBindingGuide(pageRect: targetRect(inLeftHalf: true), context: context)
+            } else if side.rightPage == 1 {
+                drawBindingGuide(pageRect: targetRect(inLeftHalf: false), context: context)
+            }
             context.endPDFPage()
         }
         context.closePDF()
@@ -84,13 +89,7 @@ public struct BookletPDFRenderer: Sendable {
             let page = source.page(at: pageNumber - 1)
         else { return }
 
-        let halfWidth = (options.sheetSize.width - options.gutter) / 2
-        let target = CGRect(
-            x: inLeftHalf ? 0 : halfWidth + options.gutter,
-            y: 0,
-            width: halfWidth,
-            height: options.sheetSize.height
-        )
+        let target = targetRect(inLeftHalf: inLeftHalf)
         let sourceBounds = page.bounds(for: .mediaBox)
         guard sourceBounds.width > 0, sourceBounds.height > 0 else { return }
 
@@ -109,12 +108,16 @@ public struct BookletPDFRenderer: Sendable {
         drawPageNumber(pageNumber, pageSize: sourceBounds.size, context: context)
         context.restoreGState()
 
-        if pageNumber == 1 {
-            drawBindingGuide(
-                renderedPageRect: CGRect(origin: origin, size: renderedSize),
-                context: context
-            )
-        }
+    }
+
+    private func targetRect(inLeftHalf: Bool) -> CGRect {
+        let halfWidth = (options.sheetSize.width - options.gutter) / 2
+        return CGRect(
+            x: inLeftHalf ? 0 : halfWidth + options.gutter,
+            y: 0,
+            width: halfWidth,
+            height: options.sheetSize.height
+        )
     }
 
     private func drawPageNumber(_ number: Int, pageSize: CGSize, context: CGContext) {
@@ -142,9 +145,9 @@ public struct BookletPDFRenderer: Sendable {
         CTLineDraw(line, context)
     }
 
-    private func drawBindingGuide(renderedPageRect: CGRect, context: CGContext) {
+    private func drawBindingGuide(pageRect: CGRect, context: CGContext) {
         let geometry = Self.bindingGuideGeometry(
-            renderedPageRect: renderedPageRect,
+            pageRect: pageRect,
             requestedBandWidth: options.bindingBandWidth
         )
         context.setFillColor(CGColor(gray: 0.91, alpha: 1))
@@ -168,15 +171,15 @@ public struct BookletPDFRenderer: Sendable {
     }
 
     static func bindingGuideGeometry(
-        renderedPageRect: CGRect,
+        pageRect: CGRect,
         requestedBandWidth: CGFloat
     ) -> BindingGuideGeometry {
-        let width = min(requestedBandWidth, renderedPageRect.width)
+        let width = min(requestedBandWidth, pageRect.width)
         let band = CGRect(
-            x: renderedPageRect.minX,
-            y: renderedPageRect.minY,
+            x: pageRect.minX,
+            y: pageRect.minY,
             width: width,
-            height: renderedPageRect.height
+            height: pageRect.height
         )
         let markerWidth = min(CGFloat(3), width)
         let markerHeight = width * 0.64

@@ -10,8 +10,17 @@ This folder contains the initial iOS app and Share Extension shell.
 3. If authentication is required, the extension opens Substack sign-in inside
    the same share panel. Tap **Done** after signing in; the original article is
    retried automatically without copying its URL or opening the main app.
-4. The extension renders the PDF as a booklet and opens AirPrint with short-edge
-   duplex requested.
+4. The extension renders the PDF as a booklet, overlays the full-height binding
+   guide on the imposed half-sheet containing page 1, and submits it through
+   Quick Print.
+5. On the first Quick Print, choose the printer once. The extension remembers
+   that printer and sends later booklets directly with Letter paper and the
+   duplex mode verified for the Brother printer. Tap **Quick Printer** in the
+   share panel whenever you need to change it.
+
+Quick Print uses the printer's IPP service because UIKit's built-in direct-print
+method disables duplex. If direct submission fails, the error alert offers the
+standard AirPrint window as a fallback.
 
 Before downloading, the extension verifies the session against Substack's signed-in
 profile endpoint. This prevents a valid but shortened public preview PDF from being
