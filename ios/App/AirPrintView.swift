@@ -32,7 +32,7 @@ final class PrintHostViewController: UIViewController {
         let info = UIPrintInfo(dictionary: nil)
         info.jobName = "Booklet"
         info.outputType = .general
-        info.duplex = .shortEdge
+        info.duplex = .longEdge
 
         let controller = UIPrintInteractionController.shared
         controller.printInfo = info
