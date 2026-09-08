@@ -7,7 +7,7 @@ Services, a Chrome extension, and an isolated Python environment.
 
 - **Local file:** right-click in Finder → **Quick Actions → Print as Booklet**.
 - **Public PDF URL:** copy the direct link → **Services → Print Copied PDF URL as Booklet**.
-- **PDF requiring login:** use the Chrome extension below.
+- **Substack article or PDF requiring login:** use the Chrome extension below.
 
 All three submit jobs immediately without a print dialog. Temporary files are
 removed after submission; source PDFs are unchanged.
@@ -19,11 +19,12 @@ After running `./install.sh`:
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. Choose **Load unpacked** and select
    `~/Library/Application Support/Print Booklet/Chrome Extension`.
-3. Open a PDF and click **Print Current PDF as Booklet**.
+3. Open a Substack article or an online PDF and click **Print Article or PDF as Booklet**.
 
-The extension requests access to the PDF's website and passes its matching
-cookies to the local download helper. Substack also needs access to `substack.com`
-for its login cookie. The temporary PDF and cookie file are removed afterward.
+For an article tab, the helper finds the post ID and publication domain, then
+downloads the article's generated PDF. The extension passes cookies for both the
+active publication and `substack.com`, so subscriber-only articles use the active
+Chrome login. The temporary PDF and cookie file are removed afterward.
 
 ## Printer and paper
 

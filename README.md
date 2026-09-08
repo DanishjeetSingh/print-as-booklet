@@ -33,7 +33,7 @@ Right-click a PDF in Finder → **Quick Actions → Print as Booklet**.
 This submits the job immediately, using the default printer and Letter paper.
 The source PDF stays unchanged.
 
-For online PDFs, use the copied-URL service or the included Chrome extension.
+For Substack articles and online PDFs, use the copied-URL service or the included Chrome extension.
 See [Mac setup](docs/macos.md) for browser printing, A4 paper, and troubleshooting.
 
 ## Status

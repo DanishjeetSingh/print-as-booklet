@@ -2,12 +2,13 @@
 
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse, urlunparse
 
 from pypdf import PdfReader
 
@@ -61,11 +62,11 @@ end run
 
 def validate_url(raw_url: object) -> str:
     if not isinstance(raw_url, str) or len(raw_url) > 8192:
-        raise ValueError("The active tab does not contain a valid PDF URL.")
+        raise ValueError("The active tab does not contain a valid article or PDF URL.")
 
     parsed = urlparse(raw_url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("Open a PDF from an http:// or https:// address first.")
+        raise ValueError("Open a Substack article or online PDF first.")
     return raw_url
 
 
@@ -110,36 +111,196 @@ def write_cookie_jar(cookies: object, output_path: Path) -> None:
     output_path.chmod(0o600)
 
 
-def fetch_pdf(url: str, cookie_jar: Path, output_path: Path) -> None:
+def fetch_url(
+    url: str,
+    cookie_jar: Path,
+    output_path: Path,
+    *,
+    accept: str | None = None,
+    referer: str | None = None,
+) -> str:
+    command = [
+        "/usr/bin/curl",
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--connect-timeout",
+        "15",
+        "--max-time",
+        "300",
+        "--retry",
+        "2",
+        "--cookie",
+        str(cookie_jar),
+        "--user-agent",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+        "--output",
+        str(output_path),
+        "--write-out",
+        "%{url_effective}",
+    ]
+    if accept:
+        command.extend(("--header", f"Accept: {accept}"))
+    if referer:
+        command.extend(("--referer", referer))
+    command.append(url)
+
     result = subprocess.run(
-        [
-            "/usr/bin/curl",
-            "--fail",
-            "--location",
-            "--silent",
-            "--show-error",
-            "--connect-timeout",
-            "15",
-            "--max-time",
-            "300",
-            "--retry",
-            "2",
-            "--cookie",
-            str(cookie_jar),
-            "--user-agent",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36 Chrome/140 Safari/537.36",
-            "--output",
-            str(output_path),
-            url,
-        ],
-        stdout=subprocess.DEVNULL,
+        command,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         check=False,
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or "Unknown download error"
-        raise RuntimeError(f"Chrome's PDF could not be fetched: {detail}")
+        raise RuntimeError(f"Chrome's page could not be fetched: {detail}")
+
+    return result.stdout.strip() or url
+
+
+def fetch_json(url: str, cookie_jar: Path, temp_dir: Path, referer: str | None = None) -> dict:
+    descriptor, temp_name = tempfile.mkstemp(prefix="substack-metadata-", suffix=".json", dir=temp_dir)
+    os.close(descriptor)
+    metadata_path = Path(temp_name)
+    try:
+        fetch_url(
+            url,
+            cookie_jar,
+            metadata_path,
+            accept="application/json",
+            referer=referer,
+        )
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("Substack returned invalid article metadata.")
+        return payload
+    finally:
+        metadata_path.unlink(missing_ok=True)
+
+
+def positive_post_id(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, str)):
+        try:
+            result = int(value)
+        except ValueError:
+            return None
+        return result if result > 0 else None
+    return None
+
+
+def post_details(payload: dict) -> tuple[int | None, str | None]:
+    post = payload.get("post")
+    records = [post, payload] if isinstance(post, dict) else [payload]
+    for record in records:
+        for key in ("id", "post_id", "postId"):
+            post_id = positive_post_id(record.get(key))
+            if post_id:
+                canonical = record.get("canonical_url")
+                return post_id, canonical if isinstance(canonical, str) else None
+    return None, None
+
+
+def post_id_from_html(html: str) -> int | None:
+    candidates = [html]
+    decoded = html
+    for _ in range(2):
+        decoded = (
+            decoded.replace(r'\"', '"')
+            .replace(r"\u0022", '"')
+            .replace("&quot;", '"')
+            .replace("%22", '"')
+            .replace("%3A", ":")
+        )
+    if decoded != html:
+        candidates.append(decoded)
+
+    patterns = (
+        r'["\']postId["\']\s*:\s*["\']?(\d+)',
+        r'["\']post_id["\']\s*:\s*["\']?(\d+)',
+        r'postId(?:%22|&quot;|\\u0022)?\s*(?::|%3A)\s*(?:%22|&quot;|\\u0022)?(\d+)',
+    )
+    for candidate in candidates:
+        for pattern in patterns:
+            match = re.search(pattern, candidate, flags=re.IGNORECASE)
+            if match:
+                return positive_post_id(match.group(1))
+    return None
+
+
+def pdf_url_for(canonical_url: str, post_id: int) -> str:
+    parsed = urlparse(canonical_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise RuntimeError("Substack returned an invalid canonical article URL.")
+    return urlunparse(
+        (parsed.scheme, parsed.netloc, "/api/v1/post/pdf", "", urlencode({"postId": post_id}), "")
+    )
+
+
+def canonical_post(post_id: int, cookie_jar: Path, temp_dir: Path) -> tuple[int, str]:
+    endpoint = f"https://substack.com/api/v1/posts/by-id/{post_id}"
+    payload = fetch_json(endpoint, cookie_jar, temp_dir)
+    resolved_id, canonical = post_details(payload)
+    if not resolved_id or not canonical:
+        raise RuntimeError("Substack did not return the article's publication address.")
+    return resolved_id, canonical
+
+
+def resolve_pdf_url(article_or_pdf_url: str, cookie_jar: Path, temp_dir: Path) -> str:
+    parsed = urlparse(article_or_pdf_url)
+    query_post_id = positive_post_id(parse_qs(parsed.query).get("postId", [None])[0])
+    if parsed.path.rstrip("/").lower() == "/api/v1/post/pdf" and query_post_id:
+        return article_or_pdf_url
+
+    reader_match = re.match(r"^/home/post/p-(\d+)(?:/|$)", parsed.path, flags=re.IGNORECASE)
+    if reader_match:
+        post_id, canonical = canonical_post(int(reader_match.group(1)), cookie_jar, temp_dir)
+        return pdf_url_for(canonical, post_id)
+
+    article_path = temp_dir / "article.html"
+    final_url = fetch_url(
+        article_or_pdf_url,
+        cookie_jar,
+        article_path,
+        accept="text/html,application/xhtml+xml,application/pdf",
+    )
+    final_parsed = urlparse(final_url)
+    final_query_post_id = positive_post_id(parse_qs(final_parsed.query).get("postId", [None])[0])
+    if final_parsed.path.rstrip("/").lower() == "/api/v1/post/pdf" and final_query_post_id:
+        return final_url
+
+    slug_match = re.search(r"/p/([^/?#]+)", final_parsed.path, flags=re.IGNORECASE)
+    api_post_id = None
+    api_canonical = None
+    if slug_match:
+        slug = quote(unquote(slug_match.group(1)), safe="")
+        metadata_url = urlunparse(
+            (final_parsed.scheme, final_parsed.netloc, f"/api/v1/posts/{slug}", "", "", "")
+        )
+        try:
+            api_post_id, api_canonical = post_details(
+                fetch_json(metadata_url, cookie_jar, temp_dir, referer=final_url)
+            )
+        except (RuntimeError, ValueError, json.JSONDecodeError):
+            pass
+
+    html = article_path.read_text(encoding="utf-8", errors="replace")
+    post_id = api_post_id or post_id_from_html(html)
+    if not post_id:
+        raise RuntimeError("The Substack post ID could not be found in the active article.")
+
+    try:
+        canonical_id, canonical_url = canonical_post(post_id, cookie_jar, temp_dir)
+        return pdf_url_for(canonical_url, canonical_id)
+    except (RuntimeError, ValueError, json.JSONDecodeError):
+        return pdf_url_for(api_canonical or final_url, post_id)
+
+
+def fetch_pdf(url: str, cookie_jar: Path, output_path: Path, referer: str | None = None) -> None:
+    fetch_url(url, cookie_jar, output_path, accept="application/pdf", referer=referer)
 
     if not output_path.is_file() or output_path.stat().st_size == 0:
         raise RuntimeError("The active tab returned an empty file.")
@@ -159,7 +320,8 @@ def process_message(message: dict, support_dir: Path) -> dict:
         source_pdf = temp_dir / "source.pdf"
 
         write_cookie_jar(message.get("cookies"), cookie_jar)
-        fetch_pdf(url, cookie_jar, source_pdf)
+        pdf_url = resolve_pdf_url(url, cookie_jar, temp_dir)
+        fetch_pdf(pdf_url, cookie_jar, source_pdf, referer=url)
         page_count = len(PdfReader(source_pdf).pages)
         if page_count < 1:
             raise RuntimeError("The downloaded PDF contains no pages.")

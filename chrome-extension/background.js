@@ -11,15 +11,16 @@ chrome.action.onClicked.addListener(async (tab) => {
 
   try {
     if (!tabId || !tab.url || !/^https?:\/\//i.test(tab.url)) {
-      throw new Error("Open a PDF from an http:// or https:// address first.");
+      throw new Error("Open a Substack article or online PDF first.");
     }
 
     const tabOrigin = new URL(tab.url).origin;
     const originPattern = `${tabOrigin}/*`;
-    const requestedOrigins = [originPattern];
-    if (new URL(tab.url).hostname === "substack.com" || new URL(tab.url).hostname.endsWith(".substack.com")) {
-      requestedOrigins.push("https://substack.com/*", "https://*.substack.com/*");
-    }
+    const requestedOrigins = [...new Set([
+      originPattern,
+      "https://substack.com/*",
+      "https://*.substack.com/*"
+    ])];
     const siteAccessGranted = await chrome.permissions.request({
       origins: requestedOrigins
     });
@@ -29,7 +30,15 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     await setStatus(tabId, "…", "#5f6368", "Preparing booklet");
 
-    const cookies = await chrome.cookies.getAll({ url: tab.url });
+    const [siteCookies, substackCookies] = await Promise.all([
+      chrome.cookies.getAll({ url: tab.url }),
+      chrome.cookies.getAll({ domain: "substack.com" })
+    ]);
+    const cookiesByKey = new Map();
+    for (const cookie of [...siteCookies, ...substackCookies]) {
+      cookiesByKey.set(`${cookie.domain}\t${cookie.path}\t${cookie.name}`, cookie);
+    }
+    const cookies = [...cookiesByKey.values()];
     const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST, {
       url: tab.url,
       cookies: cookies.map((cookie) => ({
@@ -55,7 +64,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     );
     setTimeout(() => {
       chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {});
-      chrome.action.setTitle({ tabId, title: "Print current PDF as booklet" }).catch(() => {});
+      chrome.action.setTitle({ tabId, title: "Print current article or PDF as booklet" }).catch(() => {});
     }, 5000);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
