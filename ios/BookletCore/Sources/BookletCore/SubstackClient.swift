@@ -46,6 +46,8 @@ public final class SubstackClient: @unchecked Sendable {
         configuration.httpCookieStorage = cookieStorage
         configuration.httpShouldSetCookies = true
         configuration.httpCookieAcceptPolicy = .always
+        configuration.timeoutIntervalForRequest = 180
+        configuration.timeoutIntervalForResource = 300
         configuration.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148"
         ]
@@ -69,8 +71,14 @@ public final class SubstackClient: @unchecked Sendable {
     }
 
     public func resolvePost(from sharedURL: URL) async throws -> ResolvedSubstackPost {
-        if let immediate = try SubstackURLResolver.resolveImmediately(sharedURL) {
+        let immediate = try SubstackURLResolver.resolveImmediately(sharedURL)
+        if let immediate, !Self.isCentralReaderURL(sharedURL) {
             return immediate
+        }
+
+        if let immediate, Self.isCentralReaderURL(sharedURL),
+           let canonical = try? await canonicalArticleURL(for: immediate.postID) {
+            return ResolvedSubstackPost(articleURL: canonical, postID: immediate.postID)
         }
 
         let (data, response) = try await session.data(from: sharedURL)
@@ -79,7 +87,21 @@ public final class SubstackClient: @unchecked Sendable {
             throw SubstackClientError.articleIsNotText
         }
         let finalURL = response.url ?? sharedURL
-        return try SubstackURLResolver.resolve(finalURL, articleHTML: html)
+        if let immediate {
+            // Reader links such as substack.com/home/post/p-123 redirect to the
+            // publication. The PDF endpoint exists on that publication host,
+            // not on the central reader host.
+            try SubstackURLResolver.validateSubstackURL(finalURL)
+            return ResolvedSubstackPost(articleURL: finalURL, postID: immediate.postID)
+        }
+        do {
+            return try SubstackURLResolver.resolve(finalURL, articleHTML: html)
+        } catch SubstackResolutionError.postIDNotFound {
+            guard let slug = Self.articleSlug(from: finalURL) else {
+                throw SubstackResolutionError.postIDNotFound
+            }
+            return try await resolvePostFromPublicationAPI(articleURL: finalURL, slug: slug)
+        }
     }
 
     public func downloadPDF(from sharedURL: URL) async throws -> SubstackPDF {
@@ -126,5 +148,86 @@ public final class SubstackClient: @unchecked Sendable {
             }
             throw SubstackClientError.httpFailure(statusCode: http.statusCode)
         }
+    }
+
+    private func resolvePostFromPublicationAPI(
+        articleURL: URL,
+        slug: String
+    ) async throws -> ResolvedSubstackPost {
+        guard var components = URLComponents(url: articleURL, resolvingAgainstBaseURL: false) else {
+            throw SubstackResolutionError.postIDNotFound
+        }
+        components.path = "/api/v1/posts"
+        components.query = nil
+        components.fragment = nil
+        guard let baseURL = components.url else {
+            throw SubstackResolutionError.postIDNotFound
+        }
+        let endpoint = baseURL.appendingPathComponent(slug)
+        var request = URLRequest(url: endpoint)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(articleURL.absoluteString, forHTTPHeaderField: "Referer")
+
+        let (data, response) = try await session.data(for: request)
+        try Self.validateHTTP(response)
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let postID = Self.postID(from: object),
+            postID > 0
+        else {
+            throw SubstackResolutionError.postIDNotFound
+        }
+        return ResolvedSubstackPost(articleURL: articleURL, postID: postID)
+    }
+
+    private func canonicalArticleURL(for postID: Int64) async throws -> URL {
+        let endpoint = URL(string: "https://substack.com/api/v1/posts/by-id/\(postID)")!
+        var request = URLRequest(url: endpoint)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        try Self.validateHTTP(response)
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let post = object["post"] as? [String: Any],
+            let canonicalString = post["canonical_url"] as? String,
+            let canonicalURL = URL(string: canonicalString),
+            let scheme = canonicalURL.scheme?.lowercased(),
+            scheme == "https" || scheme == "http",
+            canonicalURL.host != nil
+        else {
+            throw SubstackResolutionError.postIDNotFound
+        }
+        return canonicalURL
+    }
+
+    private static func articleSlug(from url: URL) -> String? {
+        let components = url.pathComponents.filter { $0 != "/" }
+        guard
+            let marker = components.lastIndex(where: { $0.lowercased() == "p" }),
+            components.indices.contains(marker + 1)
+        else { return nil }
+        let slug = components[marker + 1]
+        return slug.isEmpty ? nil : slug
+    }
+
+    private static func isCentralReaderURL(_ url: URL) -> Bool {
+        guard url.host?.lowercased() == "substack.com" else { return false }
+        return url.path.lowercased().hasPrefix("/home/post/")
+    }
+
+    private static func postID(from object: [String: Any]) -> Int64? {
+        for key in ["id", "post_id", "postId"] {
+            switch object[key] {
+            case let value as NSNumber:
+                return value.int64Value
+            case let value as String:
+                return Int64(value)
+            default:
+                continue
+            }
+        }
+        return nil
     }
 }

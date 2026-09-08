@@ -2,6 +2,13 @@ import Foundation
 
 @MainActor
 final class AppModel: ObservableObject {
+    enum AuthenticationState: Equatable {
+        case unknown
+        case verifying
+        case signedIn
+        case failed(String)
+    }
+
     enum State: Equatable {
         case idle
         case ready(URL)
@@ -11,6 +18,7 @@ final class AppModel: ObservableObject {
     }
 
     @Published private(set) var state: State = .idle
+    @Published private(set) var authenticationState: AuthenticationState = .unknown
     @Published var showingSignIn = false
 
     private let processor: any BookletProcessing
@@ -21,6 +29,19 @@ final class AppModel: ObservableObject {
 
     func acceptArticleURL(_ url: URL) {
         state = .ready(url)
+    }
+
+    func finishSignIn() async {
+        authenticationState = .verifying
+        do {
+            try await processor.verifyAuthentication()
+            authenticationState = .signedIn
+        } catch {
+            authenticationState = .failed(
+                "Sign-in could not be confirmed: \(error.localizedDescription)"
+            )
+        }
+        showingSignIn = false
     }
 
     func prepare() async {

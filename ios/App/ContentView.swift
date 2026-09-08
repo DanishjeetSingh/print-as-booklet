@@ -3,6 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var documentURL: URL?
+    @StateObject private var signInSession = SubstackSignInSession()
+    @State private var isFinishingSignIn = false
 
     var body: some View {
         NavigationStack {
@@ -21,17 +23,33 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
 
+                authenticationStatus
+
                 actionButton
             }
             .padding(24)
             .navigationTitle("Booklet Printer")
             .sheet(isPresented: $model.showingSignIn) {
                 NavigationStack {
-                    SubstackSignInView()
+                    SubstackSignInView(session: signInSession)
                         .navigationTitle("Substack Sign In")
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { model.showingSignIn = false }
+                                Button {
+                                    isFinishingSignIn = true
+                                    Task {
+                                        await signInSession.synchronizeCookies()
+                                        await model.finishSignIn()
+                                        isFinishingSignIn = false
+                                    }
+                                } label: {
+                                    if isFinishingSignIn {
+                                        ProgressView()
+                                    } else {
+                                        Text("Done")
+                                    }
+                                }
+                                .disabled(isFinishingSignIn)
                             }
                         }
                 }
@@ -39,6 +57,24 @@ struct ContentView: View {
             .sheet(item: $documentURL) { url in
                 AirPrintView(fileURL: url)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var authenticationStatus: some View {
+        switch model.authenticationState {
+        case .unknown:
+            EmptyView()
+        case .verifying:
+            ProgressView("Confirming Substack sign-in…")
+        case .signedIn:
+            Label("Signed in to Substack", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case let .failed(message):
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
         }
     }
 

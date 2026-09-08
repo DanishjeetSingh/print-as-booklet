@@ -6,5 +6,6 @@ struct PreparedBooklet: Sendable {
 }
 
 protocol BookletProcessing: Sendable {
+    func verifyAuthentication() async throws
     func prepareBooklet(from articleURL: URL) async throws -> PreparedBooklet
 }

@@ -1,7 +1,24 @@
 import SwiftUI
 import WebKit
 
+@MainActor
+final class SubstackSignInSession: ObservableObject {
+    weak var webView: WKWebView?
+
+    func synchronizeCookies() async {
+        guard let cookieStore = webView?.configuration.websiteDataStore.httpCookieStore else {
+            return
+        }
+        let cookies: [HTTPCookie] = await withCheckedContinuation { continuation in
+            cookieStore.getAllCookies { continuation.resume(returning: $0) }
+        }
+        SharedCookieStore.importFromWebKit(cookies)
+    }
+}
+
 struct SubstackSignInView: UIViewRepresentable {
+    @ObservedObject var session: SubstackSignInSession
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -11,6 +28,7 @@ struct SubstackSignInView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        session.webView = webView
         webView.load(URLRequest(url: AppConfiguration.substackSignInURL))
         return webView
     }

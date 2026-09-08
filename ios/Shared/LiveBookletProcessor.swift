@@ -13,6 +13,10 @@ struct LiveBookletProcessor: BookletProcessing {
         self.renderer = renderer
     }
 
+    func verifyAuthentication() async throws {
+        try await client.verifyAuthentication()
+    }
+
     func prepareBooklet(from articleURL: URL) async throws -> PreparedBooklet {
         let downloaded = try await client.downloadPDF(from: articleURL)
         let bookletData = try renderer.render(sourcePDF: downloaded.data)

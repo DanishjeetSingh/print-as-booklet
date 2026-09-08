@@ -51,6 +51,21 @@ public enum SubstackURLResolver {
             }
             return ResolvedSubstackPost(articleURL: canonicalArticleURL(url), postID: postID)
         }
+
+        let pathIDPattern = try NSRegularExpression(
+            pattern: #"^p-(\d+)$"#,
+            options: [.caseInsensitive]
+        )
+        for component in url.pathComponents {
+            let range = NSRange(component.startIndex..., in: component)
+            guard
+                let match = pathIDPattern.firstMatch(in: component, range: range),
+                let captureRange = Range(match.range(at: 1), in: component),
+                let postID = Int64(component[captureRange]),
+                postID > 0
+            else { continue }
+            return ResolvedSubstackPost(articleURL: canonicalArticleURL(url), postID: postID)
+        }
         return nil
     }
 
@@ -66,17 +81,19 @@ public enum SubstackURLResolver {
             #"postId(?:%22|&quot;|\\u0022)?\s*(?::|%3A)\s*(?:%22|&quot;|\\u0022)?(\d+)"#,
         ]
 
-        for pattern in patterns {
-            let expression = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-            let range = NSRange(articleHTML.startIndex..., in: articleHTML)
-            guard
-                let match = expression.firstMatch(in: articleHTML, range: range),
-                let captureRange = Range(match.range(at: 1), in: articleHTML),
-                let postID = Int64(articleHTML[captureRange]),
-                postID > 0
-            else { continue }
+        for candidate in HTMLCandidates(articleHTML) {
+            for pattern in patterns {
+                let expression = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+                let range = NSRange(candidate.startIndex..., in: candidate)
+                guard
+                    let match = expression.firstMatch(in: candidate, range: range),
+                    let captureRange = Range(match.range(at: 1), in: candidate),
+                    let postID = Int64(candidate[captureRange]),
+                    postID > 0
+                else { continue }
 
-            return ResolvedSubstackPost(articleURL: canonicalArticleURL(url), postID: postID)
+                return ResolvedSubstackPost(articleURL: canonicalArticleURL(url), postID: postID)
+            }
         }
 
         throw SubstackResolutionError.postIDNotFound
@@ -99,5 +116,18 @@ public enum SubstackURLResolver {
         }
         components.fragment = nil
         return components.url ?? url
+    }
+
+    private static func HTMLCandidates(_ html: String) -> [String] {
+        var decoded = html
+        for _ in 0..<2 {
+            decoded = decoded
+                .replacingOccurrences(of: #"\""#, with: #"""#)
+                .replacingOccurrences(of: #"\u0022"#, with: #"""#, options: [.caseInsensitive])
+                .replacingOccurrences(of: "&quot;", with: #"""#, options: [.caseInsensitive])
+                .replacingOccurrences(of: "%22", with: #"""#, options: [.caseInsensitive])
+                .replacingOccurrences(of: "%3A", with: ":", options: [.caseInsensitive])
+        }
+        return decoded == html ? [html] : [html, decoded]
     }
 }

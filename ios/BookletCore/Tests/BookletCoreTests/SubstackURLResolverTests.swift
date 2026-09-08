@@ -20,6 +20,20 @@ import Testing
     #expect(post.pdfURL.absoluteString == "https://donaldboat.substack.com/api/v1/post/pdf?postId=186391075")
 }
 
+@Test func resolvesReaderPathPostIDImmediately() throws {
+    let url = URL(string: "https://substack.com/home/post/p-186391075?utm_source=app")!
+    let post = try #require(try SubstackURLResolver.resolveImmediately(url))
+    #expect(post.postID == 186391075)
+    #expect(post.pdfURL.absoluteString == "https://substack.com/api/v1/post/pdf?postId=186391075")
+}
+
+@Test func extractsPostIDFromEscapedWindowPreloads() throws {
+    let article = URL(string: "https://donaldboat.substack.com/p/an-essay")!
+    let html = #"<script>window._preloads = JSON.parse("{\"post\":{\"postId\":\"186391075\"}}")</script>"#
+    let post = try SubstackURLResolver.resolve(article, articleHTML: html)
+    #expect(post.postID == 186391075)
+}
+
 @Test func rejectsNonSubstackURLs() {
     let url = URL(string: "https://example.com/p/not-substack")!
     #expect(throws: SubstackResolutionError.unsupportedURL) {
