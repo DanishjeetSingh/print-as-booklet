@@ -1,62 +1,43 @@
-# Print as Booklet for iPhone
+# iPhone app
 
-This folder contains the initial iOS app and Share Extension shell.
+Share a Substack article, prepare the booklet, and print it.
 
-## Current flow
+<p>
+  <img src="../docs/images/iphone-home.png" width="250" alt="Article-link entry and printer setup">
+  <img src="../docs/images/iphone-share.png" width="250" alt="Booklet share panel">
+</p>
 
-1. Share an article URL from Substack and choose **Print as Booklet**.
-2. The Share Extension downloads the complete PDF using its own persistent
-   Substack session.
-3. If authentication is required, the extension opens Substack sign-in inside
-   the same share panel. Tap **Done** after signing in; the original article is
-   retried automatically without copying its URL or opening the main app.
-4. The extension renders the PDF as a booklet, overlays the full-height binding
-   guide on the imposed half-sheet containing page 1, and submits it through
-   Quick Print.
-5. The first prepared booklet opens the normal print sheet. Select the printer
-   and print once; the extension captures that printer and sends later booklets
-   directly with Letter paper and the duplex mode verified for the Brother
-   printer. If Quick Print later fails, choose **Change Printer** to repeat this
-   one-time setup.
+## Install
 
-Quick Print uses the printer's IPP service because UIKit's built-in direct-print
-method disables duplex. If direct submission fails, the error alert offers the
-standard AirPrint window as a fallback.
+Requires Xcode and iOS 17+.
 
-Before downloading, the extension verifies the session against Substack's signed-in
-profile endpoint. This prevents a valid but shortened public preview PDF from being
-accepted as the complete paid article.
+1. Open `PrintAsBooklet.xcodeproj`.
+2. Select your Personal Team under **Signing & Capabilities** for both
+   **PrintAsBooklet** and **PrintAsBookletShare**.
+3. Select your iPhone and run the app.
 
-The local `BookletCore` Swift package contains URL resolution, authenticated PDF
-download, booklet rendering, and imposition. `LiveBookletProcessor` adapts that
-package to both targets and writes prepared files into each target's temporary
-container.
+If the bundle IDs are unavailable, change both. The extension's ID must start
+with the app's ID. A free Personal Team works; no App Groups are required.
 
-The app and Share Extension intentionally have independent Substack sessions.
-Free Apple Personal Team provisioning does not support App Groups. Signing into
-the main app therefore does not sign in the Share Extension; the extension asks
-for its own login the first time a paid article requires it. Neither target reads
-or stores the user's password.
+## Print
 
-## Signing setup
+1. Tap **Find my printer** in the app and allow Local Network access.
+2. In Substack, share an article → **Print as Booklet** → **Prepare & print**.
+3. Select a printer and print once. Later jobs use the saved printer.
 
-In Xcode, select the project, choose the **PrintAsBooklet** target, open
-**Signing & Capabilities**, and select your Personal Team. Repeat for
-**PrintAsBookletShare**. No paid capabilities or App Groups are required.
+Or paste an article link on the home screen and print through AirPrint.
+Keep the phone and printer on the same Wi-Fi network.
 
-If either bundle identifier is already registered to someone else, change both
-identifiers to unique values while keeping the extension identifier prefixed by
-the app identifier, for example:
+Paid articles may need sign-in. The app and share panel have separate Substack
+sessions, so each may ask you to sign in once.
 
-- `com.yourname.PrintAsBooklet`
-- `com.yourname.PrintAsBooklet.Share`
+## If printing fails
 
-Build without signing for the simulator:
+The prepared booklet stays available. Tap **Standard Print / Change Printer**
+to use AirPrint without downloading it again. If the connection drops during
+submission, check the printer before retrying to avoid a duplicate.
 
-```sh
-xcodebuild -project PrintAsBooklet.xcodeproj \
-  -scheme PrintAsBooklet \
-  -sdk iphonesimulator \
-  -configuration Debug \
-  CODE_SIGNING_ALLOWED=NO build
-```
+“Sent to printer” means the job was accepted. Physical duplex output from the
+updated Quick Print path still needs verification.
+
+[Tests and implementation notes](../docs/printing.md)

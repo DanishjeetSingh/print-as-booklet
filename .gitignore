@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 xcuserdata/
 *.xcuserstate
+work/
+.build/
