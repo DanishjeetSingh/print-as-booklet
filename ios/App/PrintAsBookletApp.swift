@@ -7,12 +7,6 @@ struct PrintAsBookletApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(model: model)
-                .onOpenURL { url in
-                    model.handleAppURL(url)
-                }
-                .onAppear {
-                    model.consumePendingArticle()
-                }
         }
     }
 }

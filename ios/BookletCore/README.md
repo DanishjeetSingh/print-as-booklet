@@ -8,6 +8,7 @@ link the `BookletCore` product from both the app and its Share Extension.
 
 ```swift
 let client = SubstackClient(cookieStorage: authenticatedCookieStorage)
+try await client.verifyAuthentication()
 let post = try await client.resolvePost(from: sharedURL)
 let downloaded = try await client.downloadPDF(for: post)
 let bookletData = try BookletPDFRenderer().render(sourcePDF: downloaded.data)

@@ -56,6 +56,18 @@ public final class SubstackClient: @unchecked Sendable {
         self.session = session
     }
 
+    /// Confirms that the session belongs to a signed-in Substack account before
+    /// accepting a PDF. This prevents Substack's valid-but-shortened public
+    /// preview PDF from being mistaken for the complete paid article.
+    public func verifyAuthentication() async throws {
+        let profileURL = URL(string: "https://substack.com/api/v1/user/profile/self")!
+        var request = URLRequest(url: profileURL)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (_, response) = try await session.data(for: request)
+        try Self.validateHTTP(response)
+    }
+
     public func resolvePost(from sharedURL: URL) async throws -> ResolvedSubstackPost {
         if let immediate = try SubstackURLResolver.resolveImmediately(sharedURL) {
             return immediate
@@ -71,6 +83,7 @@ public final class SubstackClient: @unchecked Sendable {
     }
 
     public func downloadPDF(from sharedURL: URL) async throws -> SubstackPDF {
+        try await verifyAuthentication()
         let post = try await resolvePost(from: sharedURL)
         return try await downloadPDF(for: post)
     }

@@ -12,7 +12,6 @@
 		A00100000000000000000004 /* SubstackSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000004 /* SubstackSignInView.swift */; };
 		A00100000000000000000005 /* AirPrintView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000005 /* AirPrintView.swift */; };
 		A00100000000000000000006 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000006 /* AppConfiguration.swift */; };
-		A00100000000000000000007 /* PendingArticleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000007 /* PendingArticleStore.swift */; };
 		A00100000000000000000008 /* BookletProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000008 /* BookletProcessing.swift */; };
 		A00100000000000000000009 /* PrintPresenting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000009 /* PrintPresenting.swift */; };
 		A0010000000000000000000A /* SharedCookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010000000000000000000A /* SharedCookieStore.swift */; };
@@ -20,7 +19,6 @@
 		A0010000000000000000000C /* BookletCore in Frameworks */ = {isa = PBXBuildFile; productRef = P00100000000000000000001 /* BookletCore */; };
 		A00200000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00200000000000000000001 /* ShareViewController.swift */; };
 		A00200000000000000000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000006 /* AppConfiguration.swift */; };
-		A00200000000000000000003 /* PendingArticleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000007 /* PendingArticleStore.swift */; };
 		A00200000000000000000004 /* BookletProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00100000000000000000008 /* BookletProcessing.swift */; };
 		A00200000000000000000005 /* SharedCookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010000000000000000000A /* SharedCookieStore.swift */; };
 		A00200000000000000000006 /* LiveBookletProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0010000000000000000000B /* LiveBookletProcessor.swift */; };
@@ -43,16 +41,13 @@
 		B00100000000000000000004 /* SubstackSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubstackSignInView.swift; sourceTree = "<group>"; };
 		B00100000000000000000005 /* AirPrintView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPrintView.swift; sourceTree = "<group>"; };
 		B00100000000000000000006 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
-		B00100000000000000000007 /* PendingArticleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingArticleStore.swift; sourceTree = "<group>"; };
 		B00100000000000000000008 /* BookletProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookletProcessing.swift; sourceTree = "<group>"; };
 		B00100000000000000000009 /* PrintPresenting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrintPresenting.swift; sourceTree = "<group>"; };
 		B0010000000000000000000A /* SharedCookieStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedCookieStore.swift; sourceTree = "<group>"; };
 		B0010000000000000000000B /* LiveBookletProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveBookletProcessor.swift; sourceTree = "<group>"; };
 		B00100000000000000000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B00100000000000000000011 /* PrintAsBooklet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PrintAsBooklet.entitlements; sourceTree = "<group>"; };
 		B00200000000000000000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		B00200000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B00200000000000000000003 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		B00300000000000000000001 /* PrintAsBookletShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PrintAsBookletShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00300000000000000000002 /* PrintAsBooklet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrintAsBooklet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -64,9 +59,9 @@
 
 /* Begin PBXGroup section */
 		D00200000000000000000001 = {isa = PBXGroup; children = (D00200000000000000000002 /* App */, D00200000000000000000003 /* ShareExtension */, D00200000000000000000004 /* Shared */, D00200000000000000000005 /* Products */, ); sourceTree = "<group>"; };
-		D00200000000000000000002 /* App */ = {isa = PBXGroup; children = (B00100000000000000000001, B00100000000000000000002, B00100000000000000000003, B00100000000000000000004, B00100000000000000000005, B00100000000000000000010, B00100000000000000000011, ); path = App; sourceTree = "<group>"; };
-		D00200000000000000000003 /* ShareExtension */ = {isa = PBXGroup; children = (B00200000000000000000001, B00200000000000000000002, B00200000000000000000003, ); path = ShareExtension; sourceTree = "<group>"; };
-		D00200000000000000000004 /* Shared */ = {isa = PBXGroup; children = (B00100000000000000000006, B00100000000000000000007, B00100000000000000000008, B00100000000000000000009, B0010000000000000000000A, B0010000000000000000000B, ); path = Shared; sourceTree = "<group>"; };
+		D00200000000000000000002 /* App */ = {isa = PBXGroup; children = (B00100000000000000000001, B00100000000000000000002, B00100000000000000000003, B00100000000000000000004, B00100000000000000000005, B00100000000000000000010, ); path = App; sourceTree = "<group>"; };
+		D00200000000000000000003 /* ShareExtension */ = {isa = PBXGroup; children = (B00200000000000000000001, B00200000000000000000002, ); path = ShareExtension; sourceTree = "<group>"; };
+		D00200000000000000000004 /* Shared */ = {isa = PBXGroup; children = (B00100000000000000000006, B00100000000000000000008, B00100000000000000000009, B0010000000000000000000A, B0010000000000000000000B, ); path = Shared; sourceTree = "<group>"; };
 		D00200000000000000000005 /* Products */ = {isa = PBXGroup; children = (B00300000000000000000002, B00300000000000000000001, ); name = Products; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
@@ -80,8 +75,8 @@
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		F00300000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00100000000000000000001, A00100000000000000000002, A00100000000000000000003, A00100000000000000000004, A00100000000000000000005, A00100000000000000000006, A00100000000000000000007, A00100000000000000000008, A00100000000000000000009, A0010000000000000000000A, A0010000000000000000000B, ); runOnlyForDeploymentPostprocessing = 0; };
-		F00300000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00200000000000000000001, A00200000000000000000002, A00200000000000000000003, A00200000000000000000004, A00200000000000000000005, A00200000000000000000006, ); runOnlyForDeploymentPostprocessing = 0; };
+		F00300000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00100000000000000000001, A00100000000000000000002, A00100000000000000000003, A00100000000000000000004, A00100000000000000000005, A00100000000000000000006, A00100000000000000000008, A00100000000000000000009, A0010000000000000000000A, A0010000000000000000000B, ); runOnlyForDeploymentPostprocessing = 0; };
+		F00300000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00200000000000000000001, A00200000000000000000002, A00200000000000000000004, A00200000000000000000005, A00200000000000000000006, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -91,10 +86,10 @@
 /* Begin XCBuildConfiguration section */
 		H00100000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; }; name = Debug; };
 		H00100000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; ENABLE_NS_ASSERTIONS = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 5.0; VALIDATE_PRODUCT = YES; }; name = Release; };
-		H00200000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = App/PrintAsBooklet.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		H00200000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = App/PrintAsBooklet.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		H00300000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ShareExtension/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet.Share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		H00300000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ShareExtension/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet.Share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		H00200000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		H00200000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		H00300000000000000000001 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ShareExtension/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet.Share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		H00300000000000000000002 = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ShareExtension/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Print as Booklet"; MARKETING_VERSION = 0.1; PRODUCT_BUNDLE_IDENTIFIER = com.danishjeetsingh.PrintAsBooklet.Share; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */

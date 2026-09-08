@@ -46,7 +46,7 @@ struct ContentView: View {
     private var status: some View {
         switch model.state {
         case .idle:
-            Text("Sign in once, then share an article from the Substack app and choose Print as Booklet.")
+            Text("Share an article from the Substack app and choose Print as Booklet. The share panel will ask you to sign in when needed.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
         case let .ready(url):

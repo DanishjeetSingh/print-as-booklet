@@ -19,19 +19,6 @@ final class AppModel: ObservableObject {
         self.processor = processor
     }
 
-    func handleAppURL(_ url: URL) {
-        guard url.scheme == AppConfiguration.callbackScheme else {
-            acceptArticleURL(url)
-            return
-        }
-        consumePendingArticle()
-    }
-
-    func consumePendingArticle() {
-        guard let url = PendingArticleStore.take() else { return }
-        acceptArticleURL(url)
-    }
-
     func acceptArticleURL(_ url: URL) {
         state = .ready(url)
     }

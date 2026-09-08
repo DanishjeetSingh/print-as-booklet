@@ -1,7 +1,5 @@
 import Foundation
 
 enum AppConfiguration {
-    static let appGroupIdentifier = "group.com.danishjeetsingh.PrintAsBooklet"
-    static let callbackScheme = "booklet-print"
-    static let pendingArticleURLKey = "pendingArticleURL"
+    static let substackSignInURL = URL(string: "https://substack.com/sign-in")!
 }

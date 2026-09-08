@@ -11,7 +11,7 @@ struct SubstackSignInView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
-        webView.load(URLRequest(url: URL(string: "https://substack.com/sign-in")!))
+        webView.load(URLRequest(url: AppConfiguration.substackSignInURL))
         return webView
     }
 

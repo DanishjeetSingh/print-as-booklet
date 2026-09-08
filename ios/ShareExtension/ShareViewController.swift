@@ -1,6 +1,8 @@
+import BookletCore
 import Social
 import UniformTypeIdentifiers
 import UIKit
+import WebKit
 
 final class ShareViewController: SLComposeServiceViewController {
     private var articleURL: URL?
@@ -9,13 +11,8 @@ final class ShareViewController: SLComposeServiceViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Print as Booklet"
-        placeholder = "The article will be prepared in Print as Booklet."
+        placeholder = "The article will be prepared here."
         loadSharedURL()
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        navigationItem.rightBarButtonItem?.title = "Print"
     }
 
     override func isContentValid() -> Bool {
@@ -27,20 +24,7 @@ final class ShareViewController: SLComposeServiceViewController {
             extensionContext?.cancelRequest(withError: ShareError.noURL)
             return
         }
-
-        title = "Preparing…"
-        navigationItem.rightBarButtonItem?.isEnabled = false
-        view.isUserInteractionEnabled = false
-
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let booklet = try await processor.prepareBooklet(from: articleURL)
-                presentPrintSheet(for: booklet.fileURL)
-            } catch {
-                queueForContainingApp(articleURL, reason: error.localizedDescription)
-            }
-        }
+        prepareAndPrint(articleURL)
     }
 
     override func configurationItems() -> [Any]! { [] }
@@ -65,9 +49,63 @@ final class ShareViewController: SLComposeServiceViewController {
         }
     }
 
+    private func prepareAndPrint(_ url: URL) {
+        setWorking(true, title: "Preparing…")
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let booklet = try await processor.prepareBooklet(from: url)
+                presentPrintSheet(for: booklet.fileURL)
+            } catch {
+                handlePreparationError(error, articleURL: url)
+            }
+        }
+    }
+
+    private func handlePreparationError(_ error: Error, articleURL: URL) {
+        setWorking(false, title: "Print as Booklet")
+        if requiresSignIn(error) {
+            presentSignInThenRetry(articleURL)
+            return
+        }
+
+        let alert = UIAlertController(
+            title: "Couldn’t Prepare Booklet",
+            message: error.localizedDescription,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+            self?.prepareAndPrint(articleURL)
+        })
+        alert.addAction(UIAlertAction(title: "Sign In", style: .default) { [weak self] _ in
+            self?.presentSignInThenRetry(articleURL)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    private func requiresSignIn(_ error: Error) -> Bool {
+        guard let clientError = error as? SubstackClientError else { return false }
+        if case .loginRequired = clientError { return true }
+        return false
+    }
+
+    private func presentSignInThenRetry(_ articleURL: URL) {
+        let signIn = ExtensionSignInViewController { [weak self] completed in
+            guard let self else { return }
+            if completed {
+                prepareAndPrint(articleURL)
+            } else {
+                setWorking(false, title: "Print as Booklet")
+            }
+        }
+        let navigation = UINavigationController(rootViewController: signIn)
+        navigation.modalPresentationStyle = .formSheet
+        present(navigation, animated: true)
+    }
+
     private func presentPrintSheet(for fileURL: URL) {
-        title = "Print Booklet"
-        view.isUserInteractionEnabled = true
+        setWorking(false, title: "Print Booklet")
 
         let info = UIPrintInfo(dictionary: nil)
         info.jobName = "Booklet"
@@ -81,37 +119,86 @@ final class ShareViewController: SLComposeServiceViewController {
             self?.extensionContext?.completeRequest(returningItems: nil)
         }
         if !presented {
-            queueForContainingApp(
-                articleURL,
-                reason: "AirPrint could not open inside the share window."
-            )
+            showPrintPresentationError()
         }
     }
 
-    private func queueForContainingApp(_ url: URL?, reason: String) {
-        guard let url else {
-            extensionContext?.cancelRequest(withError: ShareError.noURL)
-            return
-        }
-        PendingArticleStore.save(url)
-        let callback = URL(string: "\(AppConfiguration.callbackScheme)://shared-article")!
-        extensionContext?.open(callback) { [weak self] opened in
-            guard let self else { return }
-            if opened {
-                extensionContext?.completeRequest(returningItems: nil)
-                return
-            }
+    private func showPrintPresentationError() {
+        let alert = UIAlertController(
+            title: "Couldn’t Open AirPrint",
+            message: "Close this panel and share the article again.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
 
-            let alert = UIAlertController(
-                title: "Continue in Print as Booklet",
-                message: "\(reason) Open the Print as Booklet app to continue this saved article.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-                self?.extensionContext?.completeRequest(returningItems: nil)
-            })
-            present(alert, animated: true)
+    private func setWorking(_ working: Bool, title: String) {
+        self.title = title
+        navigationItem.rightBarButtonItem?.isEnabled = !working
+        view.isUserInteractionEnabled = !working
+    }
+}
+
+private final class ExtensionSignInViewController: UIViewController {
+    private let completion: (Bool) -> Void
+    private let webView: WKWebView
+    private var finished = false
+
+    init(completion: @escaping (Bool) -> Void) {
+        self.completion = completion
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .default()
+        self.webView = WKWebView(frame: .zero, configuration: configuration)
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "Substack Sign In"
+        view.backgroundColor = .systemBackground
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .cancel,
+            target: self,
+            action: #selector(cancel)
+        )
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Done",
+            style: .done,
+            target: self,
+            action: #selector(done)
+        )
+
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(webView)
+        NSLayoutConstraint.activate([
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.topAnchor.constraint(equalTo: view.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        webView.load(URLRequest(url: AppConfiguration.substackSignInURL))
+    }
+
+    @objc private func done() {
+        webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
+            DispatchQueue.main.async {
+                guard let self, !self.finished else { return }
+                SharedCookieStore.importFromWebKit(cookies)
+                self.finished = true
+                self.dismiss(animated: true) { self.completion(true) }
+            }
         }
+    }
+
+    @objc private func cancel() {
+        guard !finished else { return }
+        finished = true
+        dismiss(animated: true) { self.completion(false) }
     }
 }
 

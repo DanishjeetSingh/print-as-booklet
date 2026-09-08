@@ -22,10 +22,8 @@ struct LiveBookletProcessor: BookletProcessing {
     }
 
     private func outputURL(for postID: Int64) throws -> URL {
-        let root = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: AppConfiguration.appGroupIdentifier
-        ) ?? FileManager.default.temporaryDirectory
-        let directory = root.appendingPathComponent("PreparedBooklets", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PreparedBooklets", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent("substack-\(postID)-booklet.pdf")
     }
