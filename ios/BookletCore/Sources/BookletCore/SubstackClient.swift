@@ -76,8 +76,12 @@ public final class SubstackClient: @unchecked Sendable {
             if let canonical = try? await canonicalPost(for: immediate.postID) {
                 return canonical
             }
-            if !Self.isCentralReaderURL(sharedURL) {
+            if !Self.isCentralReaderURL(sharedURL),
+               SubstackURLResolver.isNativeSubstackURL(sharedURL) {
                 return immediate
+            }
+            if !Self.isCentralReaderURL(sharedURL) {
+                throw SubstackResolutionError.unsupportedURL
             }
         }
 
@@ -96,7 +100,13 @@ public final class SubstackClient: @unchecked Sendable {
         }
         do {
             let resolved = try SubstackURLResolver.resolve(finalURL, articleHTML: html)
-            return (try? await canonicalPost(for: resolved.postID)) ?? resolved
+            if let canonical = try? await canonicalPost(for: resolved.postID) {
+                return canonical
+            }
+            guard SubstackURLResolver.isNativeSubstackURL(finalURL) else {
+                throw SubstackResolutionError.unsupportedURL
+            }
+            return resolved
         } catch SubstackResolutionError.postIDNotFound {
             guard let slug = Self.articleSlug(from: finalURL) else {
                 throw SubstackResolutionError.postIDNotFound
@@ -181,11 +191,19 @@ public final class SubstackClient: @unchecked Sendable {
         else {
             throw SubstackResolutionError.postIDNotFound
         }
-        return ResolvedSubstackPost(
+        let resolved = ResolvedSubstackPost(
             articleURL: articleURL,
             postID: postID,
             audience: object["audience"] as? String
         )
+        guard !SubstackURLResolver.isNativeSubstackURL(articleURL) else {
+            return resolved
+        }
+        let canonical = try await canonicalPost(for: postID)
+        guard canonical.articleURL.host?.lowercased() == articleURL.host?.lowercased() else {
+            throw SubstackResolutionError.unsupportedURL
+        }
+        return canonical
     }
 
     private func canonicalPost(for postID: Int64) async throws -> ResolvedSubstackPost {

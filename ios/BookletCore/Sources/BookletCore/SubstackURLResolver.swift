@@ -8,7 +8,7 @@ public enum SubstackResolutionError: LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .unsupportedURL:
-            "Share a substack.com article or PDF URL."
+            "Share a Substack article or PDF URL."
         case .postIDNotFound:
             "The Substack post ID could not be found in the shared article."
         case .invalidPostID:
@@ -108,10 +108,26 @@ public enum SubstackURLResolver {
             let scheme = url.scheme?.lowercased(),
             scheme == "https" || scheme == "http",
             let host = url.host?.lowercased(),
-            host == "substack.com" || host.hasSuffix(".substack.com")
+            !host.isEmpty
         else {
             throw SubstackResolutionError.unsupportedURL
         }
+
+        if isNativeSubstackURL(url) { return }
+
+        let components = url.pathComponents.filter { $0 != "/" }
+        let hasArticlePath = components.indices.contains(0)
+            && components[0].lowercased() == "p"
+            && components.count >= 2
+        let hasPDFPath = url.path.lowercased() == "/api/v1/post/pdf"
+        guard scheme == "https", host != "localhost", hasArticlePath || hasPDFPath else {
+            throw SubstackResolutionError.unsupportedURL
+        }
+    }
+
+    static func isNativeSubstackURL(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "substack.com" || host.hasSuffix(".substack.com")
     }
 
     private static func canonicalArticleURL(_ url: URL) -> URL {

@@ -35,8 +35,13 @@ import Testing
 }
 
 @Test func rejectsNonSubstackURLs() {
-    let url = URL(string: "https://example.com/p/not-substack")!
+    let url = URL(string: "https://example.com/not-an-article")!
     #expect(throws: SubstackResolutionError.unsupportedURL) {
         try SubstackURLResolver.resolveImmediately(url)
     }
+}
+
+@Test func acceptsCustomDomainArticleCandidateForNetworkVerification() throws {
+    let url = URL(string: "https://jasmi.news/p/2026-advice")!
+    #expect(try SubstackURLResolver.resolveImmediately(url) == nil)
 }

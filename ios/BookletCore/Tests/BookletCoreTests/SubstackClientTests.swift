@@ -53,6 +53,25 @@ import Testing
     ])
 }
 
+@Test func customDomainArticleIsVerifiedThenDownloaded() async throws {
+    CustomDomainURLProtocol.requestedPaths = []
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [CustomDomainURLProtocol.self]
+    let client = SubstackClient(session: URLSession(configuration: configuration))
+
+    let result = try await client.downloadPDF(
+        from: URL(string: "https://jasmi.news/p/2026-advice")!
+    )
+
+    #expect(result.post.articleURL.host == "jasmi.news")
+    #expect(result.pageCount == 1)
+    #expect(CustomDomainURLProtocol.requestedPaths == [
+        "/p/2026-advice",
+        "/api/v1/posts/by-id/201360109",
+        "/api/v1/post/pdf",
+    ])
+}
+
 private final class MockSubstackURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var requestedPaths: [String] = []
 
@@ -159,7 +178,7 @@ private final class PublicArticleURLProtocol: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {}
 
-    private static func makePDF() -> Data {
+    fileprivate static func makePDF() -> Data {
         let output = NSMutableData()
         var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
         let consumer = CGDataConsumer(data: output as CFMutableData)!
@@ -169,4 +188,46 @@ private final class PublicArticleURLProtocol: URLProtocol, @unchecked Sendable {
         context.closePDF()
         return output as Data
     }
+}
+
+private final class CustomDomainURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var requestedPaths: [String] = []
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let requestURL = request.url!
+        Self.requestedPaths.append(requestURL.path)
+
+        let body: Data
+        let contentType: String
+        switch requestURL.path {
+        case "/p/2026-advice":
+            body = Data(#"<script>window._preloads={"post":{"post_id":201360109}}</script>"#.utf8)
+            contentType = "text/html"
+        case "/api/v1/posts/by-id/201360109":
+            body = Data(#"{"post":{"canonical_url":"https://jasmi.news/p/2026-advice","audience":"everyone"}}"#.utf8)
+            contentType = "application/json"
+        case "/api/v1/post/pdf":
+            body = PublicArticleURLProtocol.makePDF()
+            contentType = "application/pdf"
+        default:
+            body = Data()
+            contentType = "application/json"
+        }
+
+        let response = HTTPURLResponse(
+            url: requestURL,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": contentType]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }
