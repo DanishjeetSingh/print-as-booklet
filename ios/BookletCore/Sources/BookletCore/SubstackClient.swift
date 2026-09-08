@@ -72,13 +72,13 @@ public final class SubstackClient: @unchecked Sendable {
 
     public func resolvePost(from sharedURL: URL) async throws -> ResolvedSubstackPost {
         let immediate = try SubstackURLResolver.resolveImmediately(sharedURL)
-        if let immediate, !Self.isCentralReaderURL(sharedURL) {
-            return immediate
-        }
-
-        if let immediate, Self.isCentralReaderURL(sharedURL),
-           let canonical = try? await canonicalArticleURL(for: immediate.postID) {
-            return ResolvedSubstackPost(articleURL: canonical, postID: immediate.postID)
+        if let immediate {
+            if let canonical = try? await canonicalPost(for: immediate.postID) {
+                return canonical
+            }
+            if !Self.isCentralReaderURL(sharedURL) {
+                return immediate
+            }
         }
 
         let (data, response) = try await session.data(from: sharedURL)
@@ -95,7 +95,8 @@ public final class SubstackClient: @unchecked Sendable {
             return ResolvedSubstackPost(articleURL: finalURL, postID: immediate.postID)
         }
         do {
-            return try SubstackURLResolver.resolve(finalURL, articleHTML: html)
+            let resolved = try SubstackURLResolver.resolve(finalURL, articleHTML: html)
+            return (try? await canonicalPost(for: resolved.postID)) ?? resolved
         } catch SubstackResolutionError.postIDNotFound {
             guard let slug = Self.articleSlug(from: finalURL) else {
                 throw SubstackResolutionError.postIDNotFound
@@ -105,8 +106,10 @@ public final class SubstackClient: @unchecked Sendable {
     }
 
     public func downloadPDF(from sharedURL: URL) async throws -> SubstackPDF {
-        try await verifyAuthentication()
         let post = try await resolvePost(from: sharedURL)
+        if !post.isPublic {
+            try await verifyAuthentication()
+        }
         return try await downloadPDF(for: post)
     }
 
@@ -178,10 +181,14 @@ public final class SubstackClient: @unchecked Sendable {
         else {
             throw SubstackResolutionError.postIDNotFound
         }
-        return ResolvedSubstackPost(articleURL: articleURL, postID: postID)
+        return ResolvedSubstackPost(
+            articleURL: articleURL,
+            postID: postID,
+            audience: object["audience"] as? String
+        )
     }
 
-    private func canonicalArticleURL(for postID: Int64) async throws -> URL {
+    private func canonicalPost(for postID: Int64) async throws -> ResolvedSubstackPost {
         let endpoint = URL(string: "https://substack.com/api/v1/posts/by-id/\(postID)")!
         var request = URLRequest(url: endpoint)
         request.cachePolicy = .reloadIgnoringLocalCacheData
@@ -199,7 +206,11 @@ public final class SubstackClient: @unchecked Sendable {
         else {
             throw SubstackResolutionError.postIDNotFound
         }
-        return canonicalURL
+        return ResolvedSubstackPost(
+            articleURL: canonicalURL,
+            postID: postID,
+            audience: post["audience"] as? String
+        )
     }
 
     private static func articleSlug(from url: URL) -> String? {

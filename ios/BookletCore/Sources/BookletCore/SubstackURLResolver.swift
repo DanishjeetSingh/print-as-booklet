@@ -20,11 +20,15 @@ public enum SubstackResolutionError: LocalizedError, Equatable {
 public struct ResolvedSubstackPost: Sendable, Equatable {
     public let articleURL: URL
     public let postID: Int64
+    public let audience: String?
 
-    public init(articleURL: URL, postID: Int64) {
+    public init(articleURL: URL, postID: Int64, audience: String? = nil) {
         self.articleURL = articleURL
         self.postID = postID
+        self.audience = audience
     }
+
+    public var isPublic: Bool { audience?.lowercased() == "everyone" }
 
     public var pdfURL: URL {
         var components = URLComponents()

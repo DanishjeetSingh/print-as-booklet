@@ -1,4 +1,6 @@
+import CoreGraphics
 import Foundation
+import PDFKit
 import Testing
 @testable import BookletCore
 
@@ -31,6 +33,24 @@ import Testing
 
     #expect(post.postID == 186391075)
     #expect(post.pdfURL.absoluteString == "https://publication.substack.com/api/v1/post/pdf?postId=186391075")
+    #expect(post.audience == "everyone")
+}
+
+@Test func publicArticleDownloadsWithoutAuthenticatedProfile() async throws {
+    PublicArticleURLProtocol.requestedPaths = []
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [PublicArticleURLProtocol.self]
+    let client = SubstackClient(session: URLSession(configuration: configuration))
+
+    let result = try await client.downloadPDF(
+        from: URL(string: "https://substack.com/home/post/p-201360109")!
+    )
+
+    #expect(result.pageCount == 1)
+    #expect(PublicArticleURLProtocol.requestedPaths == [
+        "/api/v1/posts/by-id/201360109",
+        "/api/v1/post/pdf",
+    ])
 }
 
 private final class MockSubstackURLProtocol: URLProtocol, @unchecked Sendable {
@@ -79,7 +99,7 @@ private final class MockReaderRedirectURLProtocol: URLProtocol, @unchecked Senda
         let requestURL = request.url!
         let body: Data
         if requestURL.path == "/api/v1/posts/by-id/186391075" {
-            body = Data(#"{"post":{"canonical_url":"https://publication.substack.com/p/a-paid-essay"}}"#.utf8)
+            body = Data(#"{"post":{"canonical_url":"https://publication.substack.com/p/a-paid-essay","audience":"everyone"}}"#.utf8)
         } else {
             body = Data("<html></html>".utf8)
         }
@@ -95,4 +115,58 @@ private final class MockReaderRedirectURLProtocol: URLProtocol, @unchecked Senda
     }
 
     override func stopLoading() {}
+}
+
+private final class PublicArticleURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var requestedPaths: [String] = []
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let requestURL = request.url!
+        Self.requestedPaths.append(requestURL.path)
+
+        let body: Data
+        let contentType: String
+        let status: Int
+        switch requestURL.path {
+        case "/api/v1/posts/by-id/201360109":
+            body = Data(#"{"post":{"canonical_url":"https://jasmi.news/p/2026-advice","audience":"everyone"}}"#.utf8)
+            contentType = "application/json"
+            status = 200
+        case "/api/v1/post/pdf":
+            body = Self.makePDF()
+            contentType = "application/pdf"
+            status = 200
+        default:
+            body = Data()
+            contentType = "application/json"
+            status = 401
+        }
+
+        let response = HTTPURLResponse(
+            url: requestURL,
+            statusCode: status,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": contentType]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+
+    private static func makePDF() -> Data {
+        let output = NSMutableData()
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let consumer = CGDataConsumer(data: output as CFMutableData)!
+        let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil)!
+        context.beginPDFPage(nil)
+        context.endPDFPage()
+        context.closePDF()
+        return output as Data
+    }
 }
